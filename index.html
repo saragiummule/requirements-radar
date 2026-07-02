@@ -388,6 +388,7 @@ function startSession() {
   if (uploadedFileContent) startMsg += `\n- Documento caricato (estratto): ${uploadedFileContent.substring(0,2000)}`;
   startMsg += '\n\nPresentati brevemente in 2 righe e chiedi se sono pronti per le domande pre-call.';
 
+  conversationHistory.push({ role: 'user', content: startMsg });
   callClaude(startMsg);
 }
 
