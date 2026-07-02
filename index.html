@@ -534,6 +534,8 @@ async function callClaude(userMessage) {
     const response = await fetch('/.netlify/functions/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, system: buildSystemPrompt(), messages: conversationHistory })
+    });
     const data = await response.json();
     const reply = data.content?.map(b => b.text || '').join('') || 'Errore nella risposta.';
     document.getElementById('loading-msg')?.remove();
