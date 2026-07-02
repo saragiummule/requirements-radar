@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requirements Radar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d14; --surface: #13131f; --surface2: #1a1a2e;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --purple: #7c5cfc; --purple-light: #a98bfd; --purple-dim: rgba(124,92,252,0.15);
+    --purple-glow: rgba(124,92,252,0.3); --green: #22c55e; --green-dim: rgba(34,197,94,0.12);
+    --amber: #f59e0b; --red: #ef4444; --text: #f0f0f8; --text2: #9090b0; --text3: #5a5a78;
+    --radius: 12px;
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-text { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  .logo-text span { color: var(--purple-light); }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .bc-step { display: flex; align-items: center; gap: 5px; color: var(--text3); font-weight: 500; transition: color 0.3s; }
+  .bc-step.active { color: var(--purple-light); }
+  .bc-step.done { color: var(--text2); }
+  .bc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); transition: background 0.3s; flex-shrink: 0; }
+  .bc-step.active .bc-dot { background: var(--purple); box-shadow: 0 0 6px var(--purple-glow); }
+  .bc-step.done .bc-dot { background: var(--green); }
+  .bc-arrow { color: var(--text3); font-size: 10px; }
+  .main { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 57px); }
+  .sidebar { width: 260px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); display: none; flex-direction: column; overflow-y: auto; }
+  .sidebar.visible { display: flex; }
+  .sidebar-section { padding: 1rem 1rem 0.5rem; }
+  .sidebar-label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; color: var(--text3); text-transform: uppercase; margin-bottom: 0.5rem; }
+  .context-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem; margin-bottom: 0.5rem; }
+  .context-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .context-row:last-child { margin-bottom: 0; }
+  .context-key { font-size: 10px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .context-val { font-size: 13px; color: var(--text); }
+  .context-val.empty { color: var(--text3); font-style: italic; }
+  .deliverable-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 6px; background: var(--purple-dim); color: var(--purple-light); border: 1px solid rgba(124,92,252,0.25); }
+  .coverage-section { padding: 0.75rem 1rem; }
+  .coverage-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; font-size: 12px; color: var(--text2); border-bottom: 1px solid var(--border); }
+  .coverage-item:last-child { border-bottom: none; }
+  .coverage-check { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+  .coverage-check.done { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .messages { flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .msg { display: flex; gap: 10px; max-width: 780px; }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .msg-avatar { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; }
+  .msg-avatar.agent { background: var(--purple); color: white; }
+  .msg-avatar.user { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); font-size: 11px; }
+  .msg-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; font-size: 14px; line-height: 1.6; color: var(--text); max-width: 640px; }
+  .msg.user .msg-bubble { background: var(--purple-dim); border-color: rgba(124,92,252,0.25); }
+  .question-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; line-height: 1.5; border: 1px solid transparent; margin-top: 6px; }
+  .question-item.critical { background: rgba(239,68,68,0.06); border-color: rgba(239,68,68,0.18); }
+  .question-item.important { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.18); }
+  .question-item.nice { background: rgba(144,144,176,0.06); border-color: rgba(144,144,176,0.12); }
+  .q-badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; margin-top: 1px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .q-badge.critical { background: rgba(239,68,68,0.15); color: #f87171; }
+  .q-badge.important { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .q-badge.nice { background: rgba(144,144,176,0.1); color: var(--text2); }
+  .live-card { margin-top: 10px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border2); }
+  .live-row { padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--border); }
+  .live-row:last-child { border-bottom: none; }
+  .live-row-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; }
+  .live-row-label.next { color: var(--purple-light); }
+  .live-row-label.gap { color: var(--amber); }
+  .live-row-label.watch { color: var(--red); }
+  .live-row-content { font-size: 13px; line-height: 1.5; color: var(--text); }
+  .input-area { padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; display: none; }
+  .input-hint { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
+  .input-row { display: flex; gap: 8px; align-items: flex-end; }
+  textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-family: 'Inter', sans-serif; color: var(--text); resize: none; outline: none; min-height: 44px; max-height: 120px; line-height: 1.5; transition: border-color 0.2s; }
+  textarea:focus { border-color: var(--purple); }
+  textarea::placeholder { color: var(--text3); }
+  .send-btn { width: 44px; height: 44px; border-radius: 10px; background: var(--purple); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s, transform 0.1s; color: white; font-size: 18px; }
+  .send-btn:hover { opacity: 0.85; }
+  .send-btn:active { transform: scale(0.96); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .setup-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; }
+  .setup-title { font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .setup-field { margin-bottom: 1rem; }
+  .setup-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .setup-field input, .setup-field select, .setup-field textarea.setup-textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; color: var(--text); font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;
+  }
+  .setup-field input:focus, .setup-field select:focus, .setup-field textarea.setup-textarea:focus { border-color: var(--purple); }
+  .setup-field select option { background: var(--surface2); }
+  .setup-field textarea.setup-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+  /* DROP ZONE */
+  .drop-zone { border: 2px dashed var(--border2); border-radius: 10px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg); }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--purple); background: var(--purple-dim); }
+  .drop-zone-icon { font-size: 24px; margin-bottom: 6px; }
+  .drop-zone-text { font-size: 13px; color: var(--text2); }
+  .drop-zone-text span { color: var(--purple-light); cursor: pointer; text-decoration: underline; }
+  .file-preview { margin-top: 8px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .file-preview-name { color: var(--text); }
+  .file-preview-remove { color: var(--text3); cursor: pointer; font-size: 16px; }
+  .file-preview-remove:hover { color: var(--red); }
+
+  /* LIVE DROP */
+  .live-drop-zone { border: 1px dashed var(--border2); border-radius: 8px; padding: 8px 12px; text-align: center; cursor: pointer; transition: all 0.2s; font-size: 12px; color: var(--text3); margin-bottom: 6px; }
+  .live-drop-zone:hover, .live-drop-zone.dragover { border-color: var(--purple); color: var(--purple-light); background: var(--purple-dim); }
+
+  .start-btn { width: 100%; padding: 10px; background: var(--purple); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; transition: opacity 0.2s; }
+  .start-btn:hover { opacity: 0.85; }
+  .welcome-msg { text-align: center; padding: 2rem 1rem; color: var(--text2); }
+  .welcome-icon { font-size: 32px; margin-bottom: 0.75rem; }
+  .welcome-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+  .welcome-sub { font-size: 13px; line-height: 1.6; max-width: 360px; margin: 0 auto; }
+  .typing { display: flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--purple-light); animation: bounce 1.2s infinite; opacity: 0.6; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.6; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .divider { height: 1px; background: var(--border); margin: 0.5rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📡</div>
+    <div class="logo-text">Requirements <span>Radar</span></div>
+  </div>
+  <div class="breadcrumb">
+    <div class="bc-step active" id="bc1"><div class="bc-dot"></div><span>Setup</span></div>
+    <div class="bc-arrow">›</div>
+    <div class="bc-step" id="bc2"><div class="bc-dot"></div><span>Pre-call</span></div>
+    <div class="bc-arrow">›</div>
+    <div class="bc-step" id="bc3"><div class="bc-dot"></div><span>Live mode</span></div>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Contesto call</div>
+      <div class="context-card">
+        <div class="context-row">
+          <div class="context-key">Cliente</div>
+          <div class="context-val" id="ctx-client">—</div>
+        </div>
+        <div class="context-row">
+          <div class="context-key">Settore</div>
+          <div class="context-val" id="ctx-sector">—</div>
+        </div>
+        <div class="context-row">
+          <div class="context-key">Obiettivo</div>
+          <div class="context-val" id="ctx-goal">—</div>
+        </div>
+        <div class="context-row">
+          <div class="context-key">Materiale</div>
+          <div id="ctx-material"></div>
+        </div>
+      </div>
+    </div>
+    <div class="coverage-section">
+      <div class="sidebar-label">Aree coperte</div>
+      <div class="coverage-item"><span>Obiettivi business</span><div class="coverage-check" id="cov-business"></div></div>
+      <div class="coverage-item"><span>Utenti / persone</span><div class="coverage-check" id="cov-users"></div></div>
+      <div class="coverage-item"><span>Vincoli tecnici</span><div class="coverage-check" id="cov-tech"></div></div>
+      <div class="coverage-item"><span>Esperienza / UX</span><div class="coverage-check" id="cov-ux"></div></div>
+      <div class="coverage-item"><span>KPI / successo</span><div class="coverage-check" id="cov-kpi"></div></div>
+      <div class="coverage-item"><span>Requisiti funzionali</span><div class="coverage-check" id="cov-req"></div></div>
+    </div>
+  </div>
+
+  <div class="chat-area">
+    <div class="messages" id="messages">
+      <div class="welcome-msg" id="welcome">
+        <div class="welcome-icon">📡</div>
+        <div class="welcome-title">Benvenuta in Requirements Radar</div>
+        <div class="welcome-sub">Configura la sessione per ricevere le domande giuste da fare al cliente — calibrate su quello che hai già e su quello che devi produrre.</div>
+      </div>
+
+      <div class="setup-panel" id="setup-panel">
+        <div class="setup-title">Configurazione sessione</div>
+
+        <div class="setup-field">
+          <label>Nome cliente</label>
+          <input type="text" id="f-client" placeholder="es. BancaXYZ, Startup nel retail..." />
+        </div>
+
+        <div class="setup-field">
+          <label>Settore</label>
+          <input type="text" id="f-sector" placeholder="es. Financial services, Retail, Healthcare..." />
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="setup-field">
+          <label>Cosa hai già a disposizione sul progetto?</label>
+          <select id="f-material-type" onchange="onMaterialChange()">
+            <option value="">— Seleziona —</option>
+            <option value="doc-funzionale">Documento funzionale</option>
+            <option value="user-stories">User stories</option>
+            <option value="business-case">Business case</option>
+            <option value="journey-map">Journey map</option>
+            <option value="wireframe">Wireframe</option>
+            <option value="recap-call">Recap call</option>
+            <option value="email">Email</option>
+            <option value="executive-summary">Executive summary</option>
+            <option value="appunti">Appunti / note libere</option>
+          </select>
+        </div>
+
+        <!-- DROP ZONE (appare per documenti) -->
+        <div id="drop-zone-wrapper" style="display:none;" class="setup-field">
+          <label>Carica il documento</label>
+          <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+            ondragover="onDragOver(event,'drop-zone')" ondragleave="onDragLeave('drop-zone')" ondrop="onDrop(event,'drop-zone','file-input')">
+            <div class="drop-zone-icon">📄</div>
+            <div class="drop-zone-text">Trascina il file qui o <span>sfoglia</span></div>
+          </div>
+          <input type="file" id="file-input" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="onFileSelected(this,'setup-file-preview')">
+          <div id="setup-file-preview"></div>
+        </div>
+
+        <!-- TEXT BOX (appare per appunti) -->
+        <div id="notes-wrapper" style="display:none;" class="setup-field">
+          <label>Incolla i tuoi appunti</label>
+          <textarea class="setup-textarea" id="f-notes" placeholder="Incolla qui email, note, appunti sparsi sul progetto..."></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="setup-field">
+          <label>Cosa devi produrre alla fine del progetto?</label>
+          <textarea class="setup-textarea" id="f-goal" placeholder="es. Devo fare un brief per i designer per una nuova app mobile, poi scrivere i requisiti funzionali..." style="min-height:70px;"></textarea>
+        </div>
+
+        <button class="start-btn" onclick="startSession()">Inizia la sessione →</button>
+      </div>
+    </div>
+
+    <div class="input-area" id="input-area">
+      <!-- LIVE DROP ZONE -->
+      <div id="live-drop-area" style="display:none;">
+        <div class="live-drop-zone" id="live-drop-zone" onclick="document.getElementById('live-file-input').click()"
+          ondragover="onDragOver(event,'live-drop-zone')" ondragleave="onDragLeave('live-drop-zone')" ondrop="onDrop(event,'live-drop-zone','live-file-input')">
+          📎 Trascina un documento qui o clicca per caricarlo
+        </div>
+        <input type="file" id="live-file-input" style="display:none" accept=".pdf,.doc,.docx,.txt" onchange="onLiveFileSelected(this)">
+        <div id="live-file-preview"></div>
+      </div>
+      <div class="input-hint" id="input-hint"></div>
+      <div class="input-row">
+        <textarea id="user-input" placeholder="" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+          oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendMessage()" id="send-btn">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = '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';
+
+let sessionData = {};
+let currentPhase = 'setup';
+let conversationHistory = [];
+let coverageState = { business: false, users: false, tech: false, ux: false, kpi: false, req: false };
+let uploadedFileContent = '';
+let liveFileContent = '';
+
+const MATERIAL_LABELS = {
+  'doc-funzionale': 'Documento funzionale', 'user-stories': 'User stories',
+  'business-case': 'Business case', 'journey-map': 'Journey map',
+  'wireframe': 'Wireframe', 'recap-call': 'Recap call',
+  'email': 'Email', 'executive-summary': 'Executive summary', 'appunti': 'Appunti / note'
+};
+
+function onMaterialChange() {
+  const val = document.getElementById('f-material-type').value;
+  document.getElementById('drop-zone-wrapper').style.display = (val && val !== 'appunti') ? 'block' : 'none';
+  document.getElementById('notes-wrapper').style.display = val === 'appunti' ? 'block' : 'none';
+}
+
+function onDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('dragover'); }
+function onDragLeave(id) { document.getElementById(id).classList.remove('dragover'); }
+function onDrop(e, zoneId, inputId) {
+  e.preventDefault();
+  document.getElementById(zoneId).classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById(inputId).files = dt.files;
+    if (inputId === 'file-input') onFileSelected(document.getElementById(inputId), 'setup-file-preview');
+    else onLiveFileSelected(document.getElementById(inputId));
+  }
+}
+
+function onFileSelected(input, previewId) {
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById(previewId);
+  preview.innerHTML = `<div class="file-preview"><span class="file-preview-name">📄 ${file.name}</span><span class="file-preview-remove" onclick="removeFile('${previewId}','${input.id}')">×</span></div>`;
+  const reader = new FileReader();
+  reader.onload = e => { uploadedFileContent = e.target.result; };
+  reader.readAsText(file);
+}
+
+function onLiveFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('live-file-preview').innerHTML = `<div class="file-preview" style="margin-bottom:6px;"><span class="file-preview-name">📄 ${file.name}</span><span class="file-preview-remove" onclick="removeLiveFile()">×</span></div>`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    liveFileContent = e.target.result;
+    addMessage('user', `[Documento caricato: ${file.name}]`);
+    conversationHistory.push({ role: 'user', content: `Il consulente ha caricato un documento durante la call. Contenuto: ${liveFileContent.substring(0, 3000)}. Analizzalo e aggiorna i tuoi suggerimenti di conseguenza.` });
+    addMessage('agent', null, true);
+    callClaude('Analizza il documento appena caricato e aggiorna i suggerimenti.');
+  };
+  reader.readAsText(file);
+}
+
+function removeFile(previewId, inputId) {
+  document.getElementById(previewId).innerHTML = '';
+  document.getElementById(inputId).value = '';
+  uploadedFileContent = '';
+}
+
+function removeLiveFile() {
+  document.getElementById('live-file-preview').innerHTML = '';
+  document.getElementById('live-file-input').value = '';
+  liveFileContent = '';
+}
+
+function updateBreadcrumb(phase) {
+  const steps = ['setup', 'precall', 'live'];
+  const idx = steps.indexOf(phase);
+  ['bc1','bc2','bc3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+    if (i < idx) el.classList.add('done');
+    else if (i === idx) el.classList.add('active');
+  });
+}
+
+function startSession() {
+  const client = document.getElementById('f-client').value.trim() || 'Non specificato';
+  const sector = document.getElementById('f-sector').value.trim() || 'Non specificato';
+  const goal = document.getElementById('f-goal').value.trim();
+  const materialType = document.getElementById('f-material-type').value;
+  const notes = document.getElementById('f-notes').value.trim();
+
+  if (!goal) { alert('Descrivi cosa devi produrre alla fine del progetto.'); return; }
+
+  sessionData = { client, sector, goal, materialType, notes, fileContent: uploadedFileContent };
+
+  document.getElementById('ctx-client').textContent = client;
+  document.getElementById('ctx-sector').textContent = sector;
+  document.getElementById('ctx-goal').textContent = goal.length > 60 ? goal.substring(0,60)+'...' : goal;
+  document.getElementById('ctx-material').innerHTML = materialType
+    ? `<span class="deliverable-badge">📎 ${MATERIAL_LABELS[materialType]||materialType}</span>`
+    : `<span style="color:var(--text3);font-size:12px;">Nessuno</span>`;
+
+  document.getElementById('setup-panel').remove();
+  document.getElementById('welcome').remove();
+  document.getElementById('sidebar').classList.add('visible');
+  document.getElementById('input-area').style.display = 'block';
+
+  currentPhase = 'precall';
+  updateBreadcrumb('precall');
+  document.getElementById('input-hint').textContent = 'Chiedi le domande pre-call o aggiungi dettagli sul progetto';
+  document.getElementById('user-input').placeholder = 'es. "Genera le domande pre-call"...';
+
+  conversationHistory = [];
+  addMessage('agent', null, true);
+
+  let startMsg = `Sessione configurata:\n- Cliente: ${client}\n- Settore: ${sector}\n- Obiettivo: ${goal}`;
+  if (materialType) startMsg += `\n- Materiale disponibile: ${MATERIAL_LABELS[materialType]||materialType}`;
+  if (notes) startMsg += `\n- Appunti: ${notes}`;
+  if (uploadedFileContent) startMsg += `\n- Documento caricato (estratto): ${uploadedFileContent.substring(0,2000)}`;
+  startMsg += '\n\nPresentati brevemente in 2 righe e chiedi se sono pronti per le domande pre-call.';
+
+  callClaude(startMsg);
+}
+
+function buildSystemPrompt() {
+  return `## RUOLO
+Sei Requirements Radar, un assistente esperto che supporta i consulenti Accenture Song durante le call di discovery con i clienti D&DP. Parli sempre in italiano. Sei conciso e pratico.
+
+## CONTESTO SESSIONE
+- Cliente: ${sessionData.client}
+- Settore: ${sessionData.sector}
+- Obiettivo finale: ${sessionData.goal}
+- Materiale disponibile: ${sessionData.materialType ? (MATERIAL_LABELS[sessionData.materialType]||sessionData.materialType) : 'Nessuno'}
+${sessionData.notes ? `- Appunti forniti: ${sessionData.notes}` : ''}
+${sessionData.fileContent ? `- Documento caricato (estratto): ${sessionData.fileContent.substring(0,2000)}` : ''}
+
+## FASE PRE-CALL
+Quando il consulente chiede le domande pre-call, genera un set strutturato di domande di discovery per raccogliere le informazioni necessarie a produrre: "${sessionData.goal}".
+
+Organizza le domande per macro-aree tematiche rilevanti per il contesto (decidile tu in base al progetto — es. Obiettivi di business, Utenti, Requisiti funzionali, Esperienza UX, Vincoli tecnici, KPI...).
+
+Se è stato caricato un documento o forniti appunti, NON fare domande su informazioni già presenti in quei materiali.
+
+Per ogni domanda usa questo formato:
+🔴 CRITICA | [domanda] — [perché serve]
+🟡 IMPORTANTE | [domanda] — [perché serve]
+⚪ NICE TO HAVE | [domanda]
+
+## FASE LIVE
+Quando il consulente scrive cosa ha detto il cliente, rispondi con:
+
+💡 **Prossima domanda da fare:**
+[Una sola domanda, breve, naturale]
+
+🕳️ **Gap rilevato:**
+[Cosa manca ancora]
+
+⚠️ **Attenzione:** (solo se rilevante)
+[Red flag o ambiguità]
+
+Massimo 80 parole. Non ripetere domande già fatte.
+
+## REGOLE
+- Rispondi sempre in italiano
+- Le domande suggerite devono sembrare naturali in conversazione
+- Se viene caricato un nuovo documento durante la call, analizzalo e aggiorna i suggerimenti
+- Focus sempre su ciò che serve per raggiungere l'obiettivo: "${sessionData.goal}"`;
+}
+
+const MATERIAL_LABELS_JS = {
+  'doc-funzionale': 'Documento funzionale', 'user-stories': 'User stories',
+  'business-case': 'Business case', 'journey-map': 'Journey map',
+  'wireframe': 'Wireframe', 'recap-call': 'Recap call',
+  'email': 'Email', 'executive-summary': 'Executive summary', 'appunti': 'Appunti / note'
+};
+
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
+function addMessage(role, content, isLoading = false) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const avatar = document.createElement('div');
+  avatar.className = `msg-avatar ${role}`;
+  avatar.textContent = role === 'agent' ? '📡' : 'TU';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  if (isLoading) { bubble.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>'; div.id = 'loading-msg'; }
+  else { bubble.innerHTML = formatMessage(content); }
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return bubble;
+}
+
+function formatMessage(text) {
+  if (!text) return '';
+  let out = text;
+  if (out.includes('💡 **Prossima domanda da fare:**')) {
+    out = out.replace(/💡 \*\*Prossima domanda da fare:\*\*\n?([\s\S]*?)(?=🕳️|⚠️|$)/g, (_, c) =>
+      `<div class="live-card"><div class="live-row"><div class="live-row-label next">💡 Prossima domanda</div><div class="live-row-content">${c.trim()}</div></div>`);
+    out = out.replace(/🕳️ \*\*Gap rilevato:\*\*\n?([\s\S]*?)(?=⚠️|$)/g, (_, c) =>
+      `<div class="live-row"><div class="live-row-label gap">🕳️ Gap rilevato</div><div class="live-row-content">${c.trim()}</div></div>`);
+    out = out.replace(/⚠️ \*\*Attenzione:\*\*\n?([\s\S]*?)(?=$)/g, (_, c) =>
+      `<div class="live-row"><div class="live-row-label watch">⚠️ Attenzione</div><div class="live-row-content">${c.trim()}</div></div></div>`);
+    if (!out.includes('</div></div>')) out += '</div>';
+    return out;
+  }
+  out = out.replace(/🔴 CRITICA \| (.*?) — (.*?)(?=\n|$)/g, '<div class="question-item critical"><span class="q-badge critical">Critica</span><span>$1 <span style="color:var(--text2);font-size:12px;">— $2</span></span></div>');
+  out = out.replace(/🟡 IMPORTANTE \| (.*?) — (.*?)(?=\n|$)/g, '<div class="question-item important"><span class="q-badge important">Import.</span><span>$1 <span style="color:var(--text2);font-size:12px;">— $2</span></span></div>');
+  out = out.replace(/⚪ NICE TO HAVE \| (.*?)(?=\n|$)/g, '<div class="question-item nice"><span class="q-badge nice">Nice</span><span>$1</span></div>');
+  out = out.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  out = out.replace(/### (.*?)(?=\n|$)/g, '<div style="font-weight:600;color:var(--purple-light);margin-top:12px;margin-bottom:4px;font-size:13px;">$1</div>');
+  out = out.replace(/\n\n/g, '</p><p style="margin-top:8px;">');
+  out = out.replace(/\n/g, '<br>');
+  return out;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('send-btn').disabled = true;
+  addMessage('user', text);
+  const lower = text.toLowerCase();
+  const isLive = lower.startsWith('live:') || lower.includes('ha detto') || lower.includes('cliente dice') || lower.includes('ha risposto') || lower.includes('ha spiegato');
+  if (isLive && currentPhase !== 'live') {
+    currentPhase = 'live';
+    updateBreadcrumb('live');
+    document.getElementById('live-drop-area').style.display = 'block';
+    document.getElementById('input-hint').textContent = 'Scrivi cosa dice il cliente → ricevi subito la prossima domanda';
+    document.getElementById('user-input').placeholder = 'es. "Ha detto che vogliono qualcosa di semplice..."';
+    updateCoverage(text);
+  }
+  conversationHistory.push({ role: 'user', content: text });
+  addMessage('agent', null, true);
+  await callClaude(text);
+}
+
+function updateCoverage(text) {
+  const lower = text.toLowerCase();
+  const checks = {
+    business: ['obiettivo','goal','strategia','fatturato','business','revenue','crescita'],
+    users: ['utent','persona','cliente','user','anzian','giovani','profilo'],
+    tech: ['tecnic','sistema','integrazion','api','vincol','platform','mobile','web'],
+    ux: ['esperienza','design','interfaccia','flusso','schermata','wireframe','ux','ui'],
+    kpi: ['kpi','metric','successo','misura','performance','risultato'],
+    req: ['funzion','requisito','feature','cosa deve fare','permessi','ruoli']
+  };
+  Object.entries(checks).forEach(([key, keywords]) => {
+    if (!coverageState[key] && keywords.some(k => lower.includes(k))) {
+      coverageState[key] = true;
+      const el = document.getElementById('cov-' + key);
+      el.textContent = '✓';
+      el.classList.add('done');
+    }
+  });
+}
+
+async function callClaude(userMessage) {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, system: buildSystemPrompt(), messages: conversationHistory })
+    });
+    const data = await response.json();
+    const reply = data.content?.map(b => b.text || '').join('') || 'Errore nella risposta.';
+    document.getElementById('loading-msg')?.remove();
+    conversationHistory.push({ role: 'assistant', content: reply });
+    addMessage('agent', reply);
+  } catch (err) {
+    document.getElementById('loading-msg')?.remove();
+    addMessage('agent', 'Errore di connessione. Riprova tra qualche secondo.');
+    console.error(err);
+  }
+  document.getElementById('send-btn').disabled = false;
+}
+</script>
+</body>
+</html>
